@@ -37,6 +37,8 @@ static int is_wireguard_protocol(const char *p, ssize_t len, struct sslhcfg_prot
 static int is_tinc_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item*);
 static int is_xmpp_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item*);
 static int is_http_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item*);
+static int is_sstp_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item*);
+static int is_sevpn_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item*);
 static int is_tls_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item*);
 static int is_adb_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item*);
 static int is_socks5_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item*);
@@ -55,6 +57,8 @@ static struct protocol_probe_desc builtins[] = {
     { "tinc",       is_tinc_protocol },
     { "xmpp",       is_xmpp_protocol },
     { "http",       is_http_protocol },
+    { "sstp",       is_sstp_protocol },
+    { "sevpn",      is_sevpn_protocol },
     { "tls",        is_tls_protocol },
     { "adb",        is_adb_protocol },
     { "socks5",     is_socks5_protocol },
@@ -394,6 +398,28 @@ static int is_msrdp_protocol(const char *p, ssize_t len, struct sslhcfg_protocol
         return 0;
     packet_len = ntohs(*(uint16_t*)(p+2));
     return packet_len == len;
+}
+
+static int is_sstp_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item* proto)
+{
+    if (len < 11)
+        return PROBE_NEXT;
+
+    if (p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01 && (p[3] == 0x01 || p[3] == 0x00) && p[5] == 0x01 && p[6] == 0x00 && (p[7] == 0x01 || p[7] == 0x00) && p[9] == 0x03 && p[10] == 0x03)
+        return PROBE_MATCH;
+
+    return PROBE_NEXT;
+}
+
+static int is_sevpn_protocol(const char *p, ssize_t len, struct sslhcfg_protocols_item* proto)
+{
+    if (len < 11)
+        return PROBE_NEXT;
+
+    if (p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01 && p[3] == 0x08 && p[5] == 0x01 && p[6] == 0x00 && p[7] == 0x08 && p[9] == 0x03 && p[10] == 0x03)
+        return PROBE_MATCH;
+
+    return PROBE_NEXT;
 }
 
 static int regex_probe(const char *p, ssize_t len, struct sslhcfg_protocols_item* proto)
